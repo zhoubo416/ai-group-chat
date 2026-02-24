@@ -10,10 +10,10 @@ export async function getPublicModels() {
     PUBLIC_MODELS_CACHE = data || {};
     return PUBLIC_MODELS_CACHE;
   } catch (e) {
-    console.error('加载模型列表失败，将回退到默认 deepseek:', e);
+    console.error('加载模型列表失败，将回退到阿里默认模型:', e);
     // 回退一个最小可用的默认配置，确保应用可继续运行
     PUBLIC_MODELS_CACHE = {
-      deepseek: { provider: 'deepseek', model: 'deepseek-chat' }
+      'qwen-plus': { provider: 'ali', model: 'qwen-plus' }
     };
     return PUBLIC_MODELS_CACHE;
   }
@@ -41,8 +41,8 @@ export const aiService = {
   async generateSingleResponse(topic, modelObj, previousMessages) {
     try {
       const modelsMap = await getPublicModels();
-      const modelKey = modelObj?.model;
-      const modelCfg = modelsMap[modelKey];
+      const modelKey = modelObj?.model || Object.keys(modelsMap)[0];
+      const modelCfg = modelsMap[modelKey] || Object.values(modelsMap)[0];
       const messages = toChatMessages(previousMessages);
 
       const payload = {

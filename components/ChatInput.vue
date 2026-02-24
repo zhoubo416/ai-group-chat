@@ -10,7 +10,7 @@
     {{ chatStore.isDiscussionActive ? '讨论进行中...' : '开始讨论' }}
   </button>
   <button 
-    v-if="isDiscussionActive"
+    v-if="chatStore.isDiscussionActive"
     @click="stopDiscussion"
     class="stop-button"
   >
@@ -37,6 +37,14 @@ const sendMessage = () => {
     });
     newMessage.value = '';
   }
+};
+
+const stopDiscussion = async () => {
+  if (!chatStore.isDiscussionActive) return;
+  // 触发一次主持人总结并结束
+  await chatStore.hostCheckpoint();
+  chatStore.isDiscussionActive = false;
+  chatStore.saveSnapshot();
 };
 </script>
 

@@ -6,7 +6,7 @@ import { buildProviders } from '../../utils/aiProviders';
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const providerKey: string = body?.provider || body?.modelKey;
+    const providerKey: string = body?.provider || body?.modelKey || 'ali';
 
     // 使用集中化的 providers 配置
     const providers = buildProviders();
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     const provider = providers[providerKey as keyof typeof providers];
     if (!provider.apiKey) {
       setResponseStatus(event, 500);
-      return { error: { message: `${providerKey} API key is missing. Please set server env var: ${providerKey === 'deepseek' ? 'DEEPSEEK_API_KEY' : 'DASHSCOPE_API_KEY'}` } };
+      return { error: { message: `${providerKey} API key is missing. Please set server env var: NUXT_PUBLIC_ALI_API_KEY` } };
     }
 
     const client = new OpenAI({
@@ -32,14 +32,16 @@ export default defineEventHandler(async (event) => {
       messages = [],
       temperature,
       max_tokens,
-      topic
+      topic,
+      presence_penalty,
+      frequency_penalty,
     } = body || {};
 
     // 功能配置（按功能/场景设置默认参数）
-    const FUNCTION_PROFILES: Record<string, { temperature: number; max_tokens: number }> = {
-      default: { temperature: 0.7, max_tokens: 2000 },
-      discussion: { temperature: 0.7, max_tokens: 2000 },
-      summary: { temperature: 0.4, max_tokens: 1200 }
+    const FUNCTION_PROFILES: Record<string, { temperature: number; max_tokens: number; presence_penalty: number; frequency_penalty: number }> = {
+      default:    { temperature: 0.7,  max_tokens: 2000, presence_penalty: 0.9, frequency_penalty: 0.8 },
+      discussion: { temperature: 0.75, max_tokens: 2000, presence_penalty: 0.9, frequency_penalty: 0.8 },
+      summary:    { temperature: 0.4,  max_tokens: 1200, presence_penalty: 0.0, frequency_penalty: 0.0 }
     };
     const profile = FUNCTION_PROFILES[topic as string] || FUNCTION_PROFILES.default;
 
@@ -51,6 +53,8 @@ export default defineEventHandler(async (event) => {
     // 请求参数优先级：显式 -> 功能配置默认
     payload.temperature = typeof temperature === 'number' ? temperature : profile.temperature;
     payload.max_tokens = typeof max_tokens === 'number' ? max_tokens : profile.max_tokens;
+    payload.presence_penalty = typeof presence_penalty === 'number' ? presence_penalty : profile.presence_penalty;
+    payload.frequency_penalty = typeof frequency_penalty === 'number' ? frequency_penalty : profile.frequency_penalty;
 
     const completion = await client.chat.completions.create(payload);
     return completion;

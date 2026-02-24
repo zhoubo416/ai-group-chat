@@ -77,11 +77,19 @@ const availableModels = ref([]);
 
 async function loadModels() {
   const map = await getPublicModels();
-  availableModels.value = Object.keys(map).map((key) => ({ name: key, value: key }));
+  // 优先展示 label，其次回退 key
+  availableModels.value = Object.keys(map).map((key) => ({
+    name: map[key]?.label || key,
+    value: key
+  }));
 }
 
 onMounted(() => {
   loadModels();
+  // 如果已有保存的参与者，填充默认头像
+  localSettings.value.participants.forEach(p => {
+    if (!p.avatar) p.avatar = '/user.jpg';
+  });
 });
 
 const localSettings = ref({
@@ -102,7 +110,7 @@ watch(() => chatStore.participants, (newParticipants) => {
 }, { deep: true, immediate: true });
 
 const addParticipant = () => {
-  const defaultModel = availableModels.value[0]?.value || 'deepseek';
+  const defaultModel = availableModels.value[0]?.value || 'qwen-plus';
   localSettings.value.participants.push({
     name: '匿名者',
     role: 'Observer',
