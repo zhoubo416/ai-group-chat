@@ -238,17 +238,22 @@ export const useChatStore = defineStore('chat', {
       }
     },
     async initializeState() { // Add initialization action
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         // Load theme from localStorage
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-          this.theme = savedTheme;
-        }
+        try {
+          const savedTheme = window.localStorage.getItem('theme');
+          if (savedTheme) {
+            this.theme = savedTheme;
+          }
 
-        // Load locale from localStorage
-        const savedLocale = localStorage.getItem('locale');
-        if (savedLocale) {
-          this.locale = savedLocale;
+          // Load locale from localStorage
+          const savedLocale = window.localStorage.getItem('locale');
+          if (savedLocale) {
+            this.locale = savedLocale;
+          }
+        } catch (e) {
+          console.warn('Failed to load from localStorage:', e);
+        }
       }
 
       // 加载历史会话与上次设置（优先 IndexedDB，回退 localStorage 兼容旧数据）
@@ -276,13 +281,21 @@ export const useChatStore = defineStore('chat', {
       }
 
       // 回退：旧逻辑
-      const sessions = localStorage.getItem('chatSessions');
-      if (sessions) {
-        try { this.sessionHistory = JSON.parse(sessions) || []; } catch {}
+      let lastSessionId = null;
+      let lastSettings = null;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const sessions = window.localStorage.getItem('chatSessions');
+          if (sessions) {
+            try { this.sessionHistory = JSON.parse(sessions) || []; } catch {}
+          }
+          lastSettings = window.localStorage.getItem('chatLastSettings');
+          lastSessionId = window.localStorage.getItem('chatCurrentSessionId');
+          if (lastSessionId) this.currentSessionId = lastSessionId;
+        } catch (e) {
+          console.warn('Failed to load from localStorage fallback:', e);
+        }
       }
-      const lastSettings = localStorage.getItem('chatLastSettings');
-      const lastSessionId = localStorage.getItem('chatCurrentSessionId');
-      if (lastSessionId) this.currentSessionId = lastSessionId;
 
       if (lastSessionId && Array.isArray(this.sessionHistory)) {
         const found = this.sessionHistory.find((s) => s.id === lastSessionId);
@@ -299,8 +312,7 @@ export const useChatStore = defineStore('chat', {
           }
         } catch {}
       }
-    }
-  },
+    },
 
     // 重新开始指定会话：清空消息，写入设置并推送开场白（新会话）
     restartSession(sessionId) {

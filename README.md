@@ -47,13 +47,13 @@ PORT=3001 NITRO_PORT=3001 node .output/server/index.mjs
 ```
 
 ## 使用 PM2 部署
-已提供 PM2 启动文件 ecosystem.config.js（读取 .env，默认端口 3001）。
+已提供 PM2 启动文件 ecosystem.config.cjs（读取 .env，默认端口 3001）。
 
 常用命令：
 ```bash
 # 第一次启动（生产环境）
-pm run build
-pm2 start ecosystem.config.js --env production
+npm run build
+  pm2 start ecosystem.config.cjs --env production
 
 # 查看进程与日志
 pm2 status
@@ -67,6 +67,31 @@ pm2 stop ai-group-chat
 pm2 delete ai-group-chat
 pm2 save && pm2 startup
 ```
+
+### 一站式更新部署步骤（生产环境）
+1. 拉代码并安装依赖：
+   ```bash
+   git pull && npm ci
+   ```
+2. 构建生产产物：
+   ```bash
+   npm run build
+   ```
+3. 重新加载 PM2 进程（零停机）：
+   ```bash
+   pm2 reload ai-group-chat
+   ```
+
+> 如果是首次部署且还未创建进程，使用：
+> ```bash
+> pm2 start ecosystem.config.cjs --env production
+> pm2 save
+> ```
+
+### 常用排查命令
+- 查看最近 200 行日志：`pm2 logs ai-group-chat --lines 200`
+- 查看进程状态：`pm2 status`
+- 清理旧日志：`pm2 flush`
 
 ## 功能提示（项目内已实现）
 - 头像：参与者与主持人头像展示，主持人固定 /user.jpg。

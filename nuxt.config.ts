@@ -1,7 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  // 强制关闭 devtools，避免服务器端引用 localStorage
+  devtools: { enabled: false },
+  // 关闭服务端渲染（SSR）
+  ssr: false,
   modules: ['@pinia/nuxt', '@nuxt/ui'],
   runtimeConfig: {
     // 仅服务端可读的私钥配置（不要暴露到客户端）
