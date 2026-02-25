@@ -14,7 +14,7 @@
     @click="stopDiscussion"
     class="stop-button"
   >
-    生成总结
+    强制结束
   </button>
 </div>
   </form>
@@ -41,6 +41,7 @@ const sendMessage = () => {
 
 const stopDiscussion = async () => {
   if (!chatStore.isDiscussionActive) return;
+  alert('强制结束会话，请稍等。。。')
   // 触发一次主持人总结并结束
   await chatStore.hostCheckpoint();
   chatStore.isDiscussionActive = false;

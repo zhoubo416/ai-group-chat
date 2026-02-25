@@ -8,6 +8,7 @@ export const useChatStore = defineStore('chat', {
     participants: [],
     settings: {
       topic: '',
+      background: '',
     },
     // 会话历史与当前会话
     sessionHistory: [],
@@ -23,7 +24,23 @@ export const useChatStore = defineStore('chat', {
     maxRounds: 50,
   }),
   actions: {
-    // 内部：若内容为空则用占位“...”，并防止短期内同作者重复文本
+    deleteSession(sessionId) {
+      if (!Array.isArray(this.sessionHistory)) return;
+      const index = this.sessionHistory.findIndex((s) => s.id === sessionId);
+      if (index !== -1) {
+        this.sessionHistory.splice(index, 1);
+        if (this.currentSessionId === sessionId) {
+          if (this.sessionHistory.length > 0) {
+            this.loadSession(this.sessionHistory[0].id, { fresh: true });
+          } else {
+            this.startFreshSession();
+          }
+        }
+        this.persistSessionState();
+      }
+    },
+
+    // 内部：若内容为空则用占位"..."，并防止短期内同作者重复文本
     pushWithFallback(msg, fallback = '...') {
       if (!msg || typeof msg !== 'object') return false;
       const txt = (msg.text || '').trim();
@@ -38,7 +55,7 @@ export const useChatStore = defineStore('chat', {
       this.messages.push(finalMsg);
       return true;
     },
-
+ 
     async toggleDiscussion() {
       // 如果当前只是“查看历史”，在开始讨论前先克隆为新会话，避免覆盖旧记录
       if (!this.isDiscussionActive && this.viewingHistoryId && this.viewingHistoryId === this.currentSessionId) {
@@ -68,7 +85,7 @@ export const useChatStore = defineStore('chat', {
       await this.saveSnapshot();
     },
 
-    // 顺序讨论：多轮，每位参与者依次发言；每5轮由主持人判断是否继续
+    // 顺序讨论：多轮，每位参与者依次发言；每3轮由主持人判断是否继续
     async runSequentialDiscussion() {
       if (!this.participants || this.participants.length === 0) return;
 
@@ -90,21 +107,52 @@ export const useChatStore = defineStore('chat', {
 
         this.roundCount += 1;
 
-        const tones = ['质疑语气', '建设性补充', '数据/事实导向', '风险提示', '乐观倡议'];
         for (let idx = 0; idx < this.participants.length; idx++) {
           const p = this.participants[idx];
           if (!this.isDiscussionActive) break;
           this.isTyping = true;
           try {
-            const tone = tones[idx % tones.length];
+            const lastRoundMessages = this.messages.slice(-this.participants.length * 3);
+            const lastSpeakerContent = lastRoundMessages
+              .map(m => `${m.author}：${m.text.substring(0, 50)}...`)
+              .join('\n');
+
+            const myHistory = this.messages
+              .filter(m => m.author === p.name && m.text !== '旁听中' && m.text !== '聆听中')
+              .slice(-5)
+              .map(m => `第${this.messages.indexOf(m) + 1}轮：${m.text}`)
+              .join('\n');
+
+            const lastHostSummary = this.messages
+              .filter(m => m.author === '主持人')
+              .slice(-1)[0]?.text || '暂无';
+
             const instruction = {
               role: 'system',
-              content: `你是${p.name}（角色：${p.role || '参与者'}）。请用${tone}，并避免与上一轮内容重复，如需引用请用不同表述。基于以上发言用中文在100字以内仅发表你的观点，可以赞同或反对，表达简洁明了；禁止进行任何形式的总结或下结论，禁止使用“总结”“总结发言”“综述”“结论”等词；最终总结由主持人完成。`
+              content: `【背景】主题：${this.settings.topic}\n背景描述：${this.settings.background || '无'}\n\n你是${p.name}（角色设定：${p.role || '参与者'}）。
+【你的历史发言】
+${myHistory || '暂无'}
+
+【最近3轮参与者发言】
+${lastSpeakerContent || '暂无'}
+
+【上一次主持人总结】
+${lastHostSummary}
+
+【当前轮次】第${this.roundCount}轮
+
+请严格遵守你的角色设定来发言：
+1）用符合角色身份的专业语气或风格对话；
+2）如果讨论内容与你的角色设定无关，不要强行发言，回复"旁听中"或"聆听中"即可；
+3）避免无效的沟通，不说空话套话，不说与话题无关的话；
+4）用中文交流，禁止重复你自己之前的发言，禁止照搬其他参与者的原话；
+5）在80字以内仅发表你的观点，可以赞同、反对或补充其他人的观点，表达简洁明了；
+6）禁止进行任何形式的总结或下结论，禁止使用"总结""总结发言""综述""结论"等词，最终总结由主持人完成。`
             }; 
             const response = await aiService.generateSingleResponse(
               this.settings.topic,
               p,
-              [...this.messages, instruction]
+              [instruction, { role: 'user', content: '请基于以上背景和规则发言，发表你的观点' }]
         );
         // 若在等待期间被强制结束，则不再追加消息
         if (!this.isDiscussionActive) break;
@@ -127,8 +175,8 @@ export const useChatStore = defineStore('chat', {
 
         if (!this.isDiscussionActive) break;
 
-        // 每5轮，由主持人判断是否继续
-        if (this.roundCount % 5 === 0) {
+        // 每3轮，由主持人判断是否继续
+        if (this.roundCount % 3 === 0) {
           await this.hostCheckpoint();
           if (!this.isDiscussionActive) break;
         }
@@ -140,20 +188,45 @@ export const useChatStore = defineStore('chat', {
       await this.saveSnapshot();
     },
 
-    // 每5轮由主持人判断：若已达成一致则总结并结束，否则继续
+    // 每3轮由主持人判断：若已达成一致或出现重复则总结并结束，否则继续
     async hostCheckpoint() {
       this.isTyping = true;
       try {
+        const recentMessages = this.messages.slice(-this.participants.length * 3);
+        const recentContent = recentMessages
+          .filter(m => m.author !== '主持人')
+          .map(m => `${m.author}：${m.text}`)
+          .join('\n');
+
+        const lastHostSummary = this.messages
+          .filter(m => m.author === '主持人')
+          .slice(-1)[0]?.text || '暂无';
+
         const instruction = {
           role: 'system',
-          content: '你是主持人。请基于以上全部历史发言判断参与者是否已达成一致：若已达成一致，请用中文在150字内给出简明总结，并以“讨论已达成一致，结束。”结尾；若未达成一致，请用一句中文指出主要分歧，并以“继续下一轮。”结尾。避免重复前一轮内容，如需引用请用不同表述。'
+          content: `你是主持人。请基于以下信息进行总结判断：
+
+【最近3轮参与者发言】
+${recentContent || '暂无'}
+
+【上一次主持人总结】
+${lastHostSummary}
+
+请进行以下工作：
+1. 总结每位参与者的主要观点（不超过20字/人）
+2. 分析哪些人的观点一致或相似
+3. 判断是否达成一致
+4. 如果发言高度重复、无人修正立场或提出新方案，用80字以内总结并以"讨论陷入僵局，结束。"结尾
+5. 如果分歧无法达成一致，用80字以内总结并以"分歧难解，结束。"结尾
+6. 如果达成一致，用100字以内总结并以"讨论已达成一致，结束。"结尾
+7. 如果以上都不是，可以继续讨论，则以"继续下一轮。"结尾`
         };
         // 主持人默认 deepseek
         const hostModel = { name: '主持人', model: 'deepseek' };
         const resp = await aiService.generateSingleResponse(
           this.settings.topic,
           hostModel,
-          [...this.messages, instruction]
+          [instruction, { role: 'user', content: '请进行总结判断' }]
         );
         // 若在等待期间被强制结束，则不再追加消息
         if (!this.isDiscussionActive) return;
@@ -161,8 +234,8 @@ export const useChatStore = defineStore('chat', {
         await this.saveSnapshot();
 
         const txt = (resp?.text || '').trim();
-        // 简单判定：含“已达成一致”或“结束”且不含“继续”则结束
-        if ((/已达成一致|结束/.test(txt)) && !/继续/.test(txt)) {
+        // 判定结束：含"结束"且不含"继续"
+        if ((/已达成一致|陷入僵局|分歧难解|结束/.test(txt)) && !/继续/.test(txt)) {
           this.isDiscussionActive = false;
         }
       } catch (e) {
@@ -323,13 +396,14 @@ export const useChatStore = defineStore('chat', {
     async startFreshSession() {
       this.currentSessionId = null;
       this.viewingHistoryId = null;
-      this.resetWithSettings({ topic: '', participants: [] }, { addIntro: false });
+      this.resetWithSettings({ topic: '', background: '', participants: [] }, { addIntro: false });
       await this.persistSessionState();
     },
 
     // 内部：写入设置并重置状态，可选择是否添加主持人开场
     resetWithSettings(settings = {}, { addIntro = true } = {}) {
       this.settings.topic = settings.topic || '';
+      this.settings.background = settings.background || '';
       this.participants = Array.isArray(settings.participants) ? JSON.parse(JSON.stringify(settings.participants)) : [];
       this.messages = [];
       this.roundCount = 0;
@@ -342,7 +416,7 @@ export const useChatStore = defineStore('chat', {
           id: Date.now().toString(),
           author: '主持人',
           avatar: '/user.jpg',
-          text: `主题：${this.settings.topic || '未设置'}\n参与人员：\n${introLines}\n规则：点击“开始讨论”后，按顺序依次发言；每次发言100字以内，可赞同或反对，力求简洁明了。仅主持人可进行总结；每5轮由主持人判断是否继续；若意见一致由主持人总结并终止讨论。`,
+          text: `主题：${this.settings.topic || '未设置'}\n背景：${this.settings.background || '未提供'}\n参与人员：\n${introLines}\n规则：点击“开始讨论”后，按顺序依次发言；每次发言100字以内，可赞同或反对，力求简洁明了。仅主持人可进行总结；每3轮由主持人判断是否继续；若意见一致由主持人总结并终止讨论。`,
           timestamp: new Date().toISOString(),
         };
         this.messages.push(systemMessage);
@@ -361,6 +435,7 @@ export const useChatStore = defineStore('chat', {
       const payload = {
         id: sessionId,
         topic: settings.topic || '',
+        background: settings.background || '',
         participants: Array.isArray(settings.participants)
           ? settings.participants.map((p) => ({ name: p.name, role: p.role, model: p.model, avatar: p.avatar }))
           : [],
@@ -404,6 +479,7 @@ export const useChatStore = defineStore('chat', {
         (history || []).slice(0, maxSessions).map((s) => ({
           id: s.id,
           topic: s.topic || '',
+          background: s.background || '',
           participants: Array.isArray(s.participants)
             ? s.participants.map(normalizeParticipant)
             : [],
@@ -420,6 +496,7 @@ export const useChatStore = defineStore('chat', {
         viewingHistoryId: this.viewingHistoryId || null,
         lastSettings: {
           topic: this.settings.topic,
+          background: this.settings.background,
           participants: Array.isArray(this.participants)
             ? this.participants.map(normalizeParticipant)
             : [],
@@ -467,7 +544,7 @@ export const useChatStore = defineStore('chat', {
     // 保存当前进度到历史
     async saveSnapshot() {
       this.upsertSession(
-        { topic: this.settings.topic, participants: this.participants },
+        { topic: this.settings.topic, background: this.settings.background, participants: this.participants },
         { messages: this.messages, roundCount: this.roundCount }
       );
       await this.persistSessionState();
@@ -476,6 +553,7 @@ export const useChatStore = defineStore('chat', {
     // 从历史快照恢复
     restoreSnapshot(snapshot) {
       this.settings.topic = snapshot.topic || '';
+      this.settings.background = snapshot.background || '';
       this.participants = Array.isArray(snapshot.participants) ? JSON.parse(JSON.stringify(snapshot.participants)) : [];
       this.messages = Array.isArray(snapshot.messages) ? JSON.parse(JSON.stringify(snapshot.messages)) : [];
       this.roundCount = typeof snapshot.roundCount === 'number' ? snapshot.roundCount : 0;
@@ -507,7 +585,7 @@ export const useChatStore = defineStore('chat', {
       const newId = Date.now().toString();
       this.currentSessionId = newId;
       this.viewingHistoryId = null;
-      const settings = { topic: source.topic || '', participants: source.participants || [] };
+      const settings = { topic: source.topic || '', background: source.background || '', participants: source.participants || [] };
       this.resetWithSettings(settings, { addIntro: true });
       // 初始快照只含开场提示
       this.upsertSession(settings, { messages: this.messages, roundCount: this.roundCount });

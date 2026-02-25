@@ -47,7 +47,10 @@ export default defineEventHandler(async (event) => {
 
     const payload: any = {
       model: model || provider.defaultModel,
-      messages
+      messages: [
+        { role: 'system', content: topic },
+        ...messages
+      ]
     };
 
     // 请求参数优先级：显式 -> 功能配置默认

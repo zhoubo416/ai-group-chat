@@ -1,6 +1,6 @@
 <template>
   <div id="app" :class="[chatStore.theme, { 'settings-open': showSettings }]" lang="zh">
-    <SessionHistory :sessions="chatStore.sessionHistory" :current-id="chatStore.currentSessionId" @select="handleSelectSession" @new="handleNewSession" />
+    <SessionHistory :sessions="chatStore.sessionHistory" :current-id="chatStore.currentSessionId" @select="handleSelectSession" @new="handleNewSession" @delete="handleDeleteSession" />
 
     <div class="chat-container">
       <ChatWindow :messages="chatStore.messages" :is-typing="chatStore.isTyping" />
@@ -57,6 +57,10 @@ const handleSelectSession = (id) => {
 const handleNewSession = () => {
   chatStore.startFreshSession();
   showSettings.value = true;
+};
+
+const handleDeleteSession = (id) => {
+  chatStore.deleteSession(id);
 };
 
 onMounted(async () => {

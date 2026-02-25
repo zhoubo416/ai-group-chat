@@ -2,15 +2,22 @@
   <div class="chat-window">
     <div class="chat-header">
       <h2>AI群组聊天</h2>
-      <div class="header-actions" v-if="chatStore.isDiscussionActive">
-        <span class="round-info">第 {{ chatStore.roundCount }} / {{ chatStore.maxRounds }} 轮</span>
-        <button class="force-end-btn" @click="chatStore.forceEndDiscussion()">强制结束</button>
+      <div class="header-actions">
+        <select v-model="filterAuthor" class="filter-select">
+          <option value="">全部人员</option>
+          <option v-for="p in chatStore.participants" :key="p.name" :value="p.name">
+            {{ p.name }}
+          </option>
+          <option value="主持人">主持人</option>
+        </select>
+        <span v-if="chatStore.isDiscussionActive" class="round-info">第 {{ chatStore.roundCount }} / {{ chatStore.maxRounds }} 轮</span>
+        <button v-if="chatStore.isDiscussionActive" class="force-end-btn" @click="chatStore.forceEndDiscussion()">强制结束</button>
       </div>
     </div>
     <div class="messages-container" ref="messagesContainer">
       <ClientOnly>
         <ChatMessage
-          v-for="message in messages"
+          v-for="message in filteredMessages"
           :key="message.id"
           :message="message"
         />
@@ -24,7 +31,7 @@
                 <div class="dot"></div>
                 <div class="dot"></div>
               </div>
-              <span class="placeholder-text">{{ loading ? '加载中...' : '生成中...' }}</span>
+              <span class="placeholder-text">{{ loading ? '加载中...' : '思考中...' }}</span>
             </div>
           </div>
         </div>
@@ -34,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useChatStore } from '../stores/chat.js';
 const chatStore = useChatStore();
 const loading = ref(false);
@@ -51,6 +58,20 @@ const props = defineProps({
   },
 });
 
+const filterAuthor = ref('');
+
+const filteredMessages = computed(() => {
+  if (!filterAuthor.value) return props.messages;
+  return props.messages.filter(m => m.author === filterAuthor.value);
+});
+
+watch(() => chatStore.participants, () => {
+  const currentParticipants = chatStore.participants.map(p => p.name);
+  if (filterAuthor.value && !currentParticipants.includes(filterAuthor.value) && filterAuthor.value !== '主持人') {
+    filterAuthor.value = '';
+  }
+});
+
 const messagesContainer = ref(null);
 
 const scrollToBottom = () => {
@@ -63,6 +84,7 @@ const scrollToBottom = () => {
 
 watch(() => props.messages, scrollToBottom, { deep: true });
 watch(() => props.isTyping, scrollToBottom);
+watch(filteredMessages, scrollToBottom, { deep: true });
 
 </script>
 
@@ -95,6 +117,15 @@ watch(() => props.isTyping, scrollToBottom);
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.filter-select {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
 }
 
 .round-info {

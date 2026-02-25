@@ -12,12 +12,15 @@
         :class="['item', { active: s.id === currentId }]"
         @click="$emit('select', s.id)"
       >
-        <div class="topic" :title="s.topic || '未命名主题'">{{ s.topic || '未命名主题' }}</div>
-        <div class="meta">
-          <span>{{ (s.participants?.length || 0) }} 人</span>
-          <span>·</span>
-          <span>{{ formatTime(s.updatedAt) }}</span>
+        <div class="item-content">
+          <div class="topic" :title="s.topic || '未命名主题'">{{ s.topic || '未命名主题' }}</div>
+          <div class="meta">
+            <span>{{ (s.participants?.length || 0) }} 人</span>
+            <span>·</span>
+            <span>{{ formatTime(s.updatedAt) }}</span>
+          </div>
         </div>
+        <button class="delete-btn" @click.stop="$emit('delete', s.id)">删除</button>
       </li>
     </ul>
   </aside>
@@ -102,11 +105,41 @@ const formatTime = (ts) => {
   padding: 10px 12px;
   cursor: pointer;
   transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
 }
 
 .item:hover {
   border-color: #d9d9d9;
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.item:hover .delete-btn {
+  opacity: 1;
+}
+
+.item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-btn {
+  opacity: 0;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  background: #ff7875;
 }
 
 .item.active {
