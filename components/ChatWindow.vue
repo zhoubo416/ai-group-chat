@@ -14,7 +14,7 @@
         <button v-if="chatStore.isDiscussionActive" class="force-end-btn" @click="chatStore.forceEndDiscussion()">强制结束</button>
       </div>
     </div>
-    <div class="messages-container" ref="messagesContainer">
+    <div class="messages-container" ref="messagesContainer" @scroll="handleScroll">
       <ClientOnly>
         <ChatMessage
           v-for="message in filteredMessages"
@@ -73,10 +73,24 @@ watch(() => chatStore.participants, () => {
 });
 
 const messagesContainer = ref(null);
+const isUserScrolling = ref(false);
+const SCROLL_THRESHOLD = 100;
+
+const handleScroll = () => {
+  if (!messagesContainer.value) return;
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value;
+  const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+  
+  if (distanceFromBottom > SCROLL_THRESHOLD) {
+    isUserScrolling.value = true;
+  } else {
+    isUserScrolling.value = false;
+  }
+};
 
 const scrollToBottom = () => {
   nextTick(() => {
-    if (messagesContainer.value) {
+    if (messagesContainer.value && !isUserScrolling.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
   });
