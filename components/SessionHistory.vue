@@ -1,5 +1,5 @@
 <template>
-  <aside class="history">
+  <aside class="history" :class="{ open: show }">
     <div class="history-header">
       <div class="title">会话历史</div>
       <button class="new-btn" @click="$emit('new')">新会话</button>
@@ -30,6 +30,7 @@
 const props = defineProps({
   sessions: { type: Array, default: () => [] },
   currentId: { type: [String, Number, null], default: null },
+  show: { type: Boolean, default: false },
 });
 
 const formatTime = (ts) => {
@@ -162,5 +163,78 @@ const formatTime = (ts) => {
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+@media (max-width: 768px) {
+  .history {
+    width: 80%;
+    max-width: 300px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 950;
+  }
+
+  .history.open {
+    transform: translateX(0);
+  }
+
+  .history-header {
+    padding: 0.5rem 0;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .new-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .item {
+    padding: 12px 10px;
+  }
+
+  .topic {
+    font-size: 0.9rem;
+  }
+
+  .delete-btn {
+    opacity: 1;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .history {
+    width: 85%;
+    max-width: none;
+  }
+
+  .history-header {
+    padding: 0.375rem 0;
+  }
+
+  .title {
+    font-size: 0.95rem;
+  }
+
+  .new-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+
+  .item {
+    padding: 10px 8px;
+  }
+
+  .topic {
+    font-size: 0.85rem;
+  }
+
+  .meta {
+    font-size: 11px;
+  }
 }
 </style>

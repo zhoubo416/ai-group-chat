@@ -124,4 +124,52 @@ const stopDiscussion = async () => {
   background: #f44336;
   margin-left: 12px;
 }
+
+@media (max-width: 768px) {
+  .chat-input-form {
+    padding: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .discussion-controls {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .discussion-button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    flex: 1;
+    max-width: 140px;
+  }
+
+  .stop-button {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-input-form {
+    padding: 0.5rem;
+  }
+
+  .discussion-controls {
+    gap: 0.375rem;
+  }
+
+  .discussion-button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    max-width: 120px;
+  }
+
+  .stop-button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    max-width: 80px;
+  }
+}
 </style>

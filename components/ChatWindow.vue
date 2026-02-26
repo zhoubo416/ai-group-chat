@@ -218,4 +218,96 @@ watch(filteredMessages, scrollToBottom, { deep: true });
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-6px); }
 }
+
+@media (max-width: 768px) {
+  .chat-window {
+    border-radius: 0;
+  }
+
+  .chat-header {
+    padding: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chat-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .filter-select {
+    padding: 4px 6px;
+    font-size: 0.8rem;
+  }
+
+  .round-info {
+    font-size: 0.85rem;
+  }
+
+  .force-end-btn {
+    display: none;
+  }
+
+  .messages-container {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-header {
+    padding: 0.5rem;
+  }
+
+  .chat-header h2 {
+    font-size: 1rem;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .filter-select {
+    font-size: 0.75rem;
+    padding: 3px 5px;
+  }
+
+  .round-info {
+    font-size: 0.8rem;
+  }
+
+  .force-end-btn {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+  }
+
+  .messages-container {
+    padding: 0.5rem;
+  }
+
+  .message-placeholder {
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .message-placeholder .avatar.skeleton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .message-placeholder .bubble {
+    padding: 8px 10px;
+  }
+
+  .loading-dots .dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .placeholder-text {
+    font-size: 0.85rem;
+  }
+}
 </style>
