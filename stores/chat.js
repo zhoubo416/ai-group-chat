@@ -112,7 +112,7 @@ export const useChatStore = defineStore('chat', {
           if (!this.isDiscussionActive) break;
           this.isTyping = true;
           try {
-            const lastRoundMessages = this.messages.slice(-this.participants.length * 3);
+            const lastRoundMessages = this.messages.slice(-this.participants.length * 2);
             const lastSpeakerContent = lastRoundMessages
               .map(m => `${m.author}：${m.text.substring(0, 50)}...`)
               .join('\n');
@@ -133,7 +133,7 @@ export const useChatStore = defineStore('chat', {
 【你的历史发言】
 ${myHistory || '暂无'}
 
-【最近3轮参与者发言】
+【最近2轮参与者发言】
 ${lastSpeakerContent || '暂无'}
 
 【上一次主持人总结】
@@ -142,12 +142,13 @@ ${lastHostSummary}
 【当前轮次】第${this.roundCount}轮
 
 请严格遵守你的角色设定来发言：
-1）用符合角色身份的专业语气或风格对话；
-2）如果讨论内容与你的角色设定无关，不要强行发言，回复"旁听中"或"聆听中"即可；
+1）用符合角色身份的专业语气或风格对话，只回复和自己相关的问题，不相关的可以不回答；
+2）如果讨论内容与你的角色设定关系不大或者直接不相关，不要强行发言，回复"旁听中"或"聆听中"即可；
 3）避免无效的沟通，不说空话套话，不说与话题无关的话；
 4）用中文交流，禁止重复你自己之前的发言，禁止照搬其他参与者的原话；
 5）在80字以内仅发表你的观点，可以赞同、反对或补充其他人的观点，表达简洁明了；
-6）禁止进行任何形式的总结或下结论，禁止使用"总结""总结发言""综述""结论"等词，最终总结由主持人完成。`
+6）禁止进行任何形式的总结或下结论，禁止使用"总结""总结发言""综述""结论"等词，最终总结由主持人完成；
+7）秉承积极推进项目落地和目标达成的目的，参考主持人给出的引导建议发表意见。`
             }; 
             const response = await aiService.generateSingleResponse(
               this.settings.topic,
@@ -217,9 +218,10 @@ ${lastHostSummary}
 2. 分析哪些人的观点一致或相似
 3. 判断是否达成一致
 4. 如果发言高度重复、无人修正立场或提出新方案，用80字以内总结并以"讨论陷入僵局，结束。"结尾
-5. 如果分歧无法达成一致，用80字以内总结并以"分歧难解，结束。"结尾
-6. 如果达成一致，用100字以内总结并以"讨论已达成一致，结束。"结尾
-7. 如果以上都不是，可以继续讨论，则以"继续下一轮。"结尾`
+5. 如果刚开始讨论就有较大分歧，可以尝试给出引导建议（推动项目落地和目标达成的方向），用100字以内总结并以"继续下一轮。"结尾
+6. 如果之前已经有过引导且引导后仍无进展，分歧没有收敛，用80字以内总结并以"分歧难解，结束。"结尾
+7. 如果达成一致，用100字以内总结并以"讨论已达成一致，结束。"结尾
+8. 如果以上都不是，说明成员可以自行达成意见，继续讨论即可，以"继续下一轮。"结尾`
         };
         // 主持人默认 deepseek
         const hostModel = { name: '主持人', model: 'deepseek' };

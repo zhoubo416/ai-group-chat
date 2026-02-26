@@ -15,7 +15,7 @@ type AliModel = {
 // 当前验证可用的阿里模型（OpenAI 兼容）
 const ALI_MODELS: AliModel[] = [
   { key: 'qwen-plus', model: 'qwen-plus', label: 'Qwen Plus' },
-  { key: 'qwen-max', model: 'qwen-max', label: 'Qwen Max' }
+  { key: 'qwen-max', model: 'qwen3-max', label: 'Qwen Max' }
 ];
 
 // 单一来源：集中定义 baseURL 与默认模型，并注入 apiKey
