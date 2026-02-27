@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
       topic,
       presence_penalty,
       frequency_penalty,
+      tools,
     } = body || {};
 
     // 功能配置（按功能/场景设置默认参数）
@@ -50,7 +51,8 @@ export default defineEventHandler(async (event) => {
       messages: [
         { role: 'system', content: topic },
         ...messages
-      ]
+      ],
+      tools
     };
 
     // 请求参数优先级：显式 -> 功能配置默认
@@ -58,7 +60,7 @@ export default defineEventHandler(async (event) => {
     payload.max_tokens = typeof max_tokens === 'number' ? max_tokens : profile.max_tokens;
     payload.presence_penalty = typeof presence_penalty === 'number' ? presence_penalty : profile.presence_penalty;
     payload.frequency_penalty = typeof frequency_penalty === 'number' ? frequency_penalty : profile.frequency_penalty;
-
+    console.log(payload, 'payload');
     const completion = await client.chat.completions.create(payload);
     return completion;
   } catch (err: any) {
