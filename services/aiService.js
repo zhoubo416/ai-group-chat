@@ -49,7 +49,8 @@ export const aiService = {
         provider: modelCfg?.provider,
         model: modelCfg?.model,
         topic,
-        messages
+        messages,
+        tools: modelCfg?.tools
       };
 
       const { data: completion } = await axios.post('/api/ai/chat', payload);
